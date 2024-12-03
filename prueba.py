@@ -35,8 +35,10 @@ def get_cpu_temperature():
                 and "CPU" in sensor.Name
                 and sensor.Value is not None
             ):
-                return sensor.Value
+                return float(sensor.Value)  # Convertimos el valor a float
         print("No se encontraron sensores de temperatura para la CPU.")
+    except UnicodeDecodeError as e:
+        print(f"Error de codificación en CPU: {e}")
     except Exception as e:
         print(f"Error obteniendo temperatura de CPU: {e}")
     return None
@@ -51,35 +53,46 @@ def get_gpu_temperature():
                 and "GPU" in sensor.Name
                 and sensor.Value is not None
             ):
-                return sensor.Value
+                return float(sensor.Value)  # Convertimos el valor a float
         print("No se encontraron sensores de temperatura para la GPU.")
+    except UnicodeDecodeError as e:
+        print(f"Error de codificación en GPU: {e}")
     except Exception as e:
         print(f"Error obteniendo temperatura de GPU: {e}")
     return None
 
 
 def write_log(message):
-    with open(log_file, "a", encoding="utf-8") as file:
-        file.write(message + "\n")
+    try:
+        with open(log_file, "a", encoding="utf-8", errors="replace") as file:
+            file.write(message + "\n")
 
-    with open(log_file, "r", encoding="utf-8") as file:
-        lines = file.readlines()
+        with open(log_file, "r", encoding="utf-8", errors="replace") as file:
+            lines = file.readlines()
 
-    # Mantener solo las últimas 5 líneas
-    if len(lines) > 5:
-        with open(log_file, "w", encoding="utf-8") as file:
-            file.writelines(lines[-5:])
+        # Mantener solo las últimas 5 líneas
+        if len(lines) > 5:
+            with open(log_file, "w", encoding="utf-8", errors="replace") as file:
+                file.writelines(lines[-5:])
+    except Exception as e:
+        print(f"Error escribiendo en el log: {e}")
 
 
 def log_to_db(data):
-    collection.insert_one(data)
-    if collection.count_documents({}) > 5000:
-        oldest = collection.find().sort("_id", 1).limit(1)
-        collection.delete_one({"_id": oldest[0]["_id"]})
+    try:
+        collection.insert_one(data)
+        if collection.count_documents({}) > 5000:
+            oldest = collection.find().sort("_id", 1).limit(1)
+            collection.delete_one({"_id": oldest[0]["_id"]})
+    except Exception as e:
+        print(f"Error registrando en la base de datos: {e}")
 
 
 async def send_telegram_message(message):
-    await bot.send_message(chat_id=chat_id, text=message)
+    try:
+        await bot.send_message(chat_id=chat_id, text=message)
+    except Exception as e:
+        print(f"Error enviando mensaje a Telegram: {e}")
 
 
 def monitor():
