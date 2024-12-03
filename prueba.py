@@ -11,8 +11,8 @@ db = client["monitoring"]
 collection = db["logs"]
 
 # Configuración de Telegram
-bot_token = "TU_TOKEN_DE_TELEGRAM"
-chat_id = "TU_CHAT_ID"
+bot_token = "7760563991:AAFTxTb4ZQmkcvZsSb-5kSoXrOuG6ErhRx0"
+chat_id = "6362273695"
 bot = Bot(token=bot_token)
 
 # Archivo log (máximo 5 entradas)
