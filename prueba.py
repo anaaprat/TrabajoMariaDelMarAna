@@ -6,7 +6,6 @@ from pymongo import MongoClient
 from telegram import Bot
 import asyncio
 import wmi
-import win32com.client
 import time
 
 # Configuración de MongoDB
@@ -15,15 +14,15 @@ db = client["monitoring"]
 collection = db["logs"]
 
 # Configuración de Telegram
-bot_token = "7760563991:AAFTxTb4ZQmkcvZsSb-5kSoXrOuG6ErhRx0"  # Reemplaza por tu token
-chat_id = "6362273695"  # Reemplaza por tu chat ID
+bot_token = "7380846438:AAG3zBi-k7D8CR-jEuuQMguKvGADQDLLLj0"  # Reemplaza por tu token
+chat_id = "7936967176"  # Reemplaza por tu chat ID
 bot = Bot(token=bot_token)
 
 # Archivo log (máximo 5 entradas)
 log_file = "monitor.log"
 
 # Inicialización de OpenHardwareMonitor (usando WMI para acceder a hardware)
-hardware = wmi.WMI(namespace="root\\OpenHardwareMonitor")
+hardware = wmi.WMI(namespace=r"root\OpenHardwareMonitor")
 
 
 def get_cpu_temperature():
@@ -35,13 +34,11 @@ def get_cpu_temperature():
                 and "CPU" in sensor.Name
                 and sensor.Value is not None
             ):
-                return float(sensor.Value)  # Convertimos el valor a float
-        print("No se encontraron sensores de temperatura para la CPU.")
-    except UnicodeDecodeError as e:
-        print(f"Error de codificación en CPU: {e}")
+                return float(sensor.Value)
+        return None
     except Exception as e:
         print(f"Error obteniendo temperatura de CPU: {e}")
-    return None
+        return None
 
 
 def get_gpu_temperature():
@@ -53,13 +50,11 @@ def get_gpu_temperature():
                 and "GPU" in sensor.Name
                 and sensor.Value is not None
             ):
-                return float(sensor.Value)  # Convertimos el valor a float
-        print("No se encontraron sensores de temperatura para la GPU.")
-    except UnicodeDecodeError as e:
-        print(f"Error de codificación en GPU: {e}")
+                return float(sensor.Value)
+        return None
     except Exception as e:
         print(f"Error obteniendo temperatura de GPU: {e}")
-    return None
+        return None
 
 
 def write_log(message):
@@ -82,8 +77,9 @@ def log_to_db(data):
     try:
         collection.insert_one(data)
         if collection.count_documents({}) > 5000:
-            oldest = collection.find().sort("_id", 1).limit(1)
-            collection.delete_one({"_id": oldest[0]["_id"]})
+            oldest = collection.find_one(sort=[("_id", 1)])
+            if oldest:
+                collection.delete_one({"_id": oldest["_id"]})
     except Exception as e:
         print(f"Error registrando en la base de datos: {e}")
 
@@ -105,11 +101,9 @@ def monitor():
             ip_address = socket.gethostbyname(socket.gethostname())
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            # Verificar umbrales
+            # Verificar umbrales y registrar datos
             if cpu_temp and cpu_temp > 45:
-                cpu_message = (
-                    f"{timestamp} + Control de temperatura de la CPU + {ip_address}"
-                )
+                cpu_message = f"{timestamp} + Control de temperatura de la CPU: {cpu_temp}°C + {ip_address}"
                 write_log(cpu_message)
                 log_to_db(
                     {
@@ -122,9 +116,7 @@ def monitor():
                 asyncio.run(send_telegram_message(cpu_message))
 
             if gpu_temp and gpu_temp > 60:
-                gpu_message = (
-                    f"{timestamp} + Control de temperatura de la GPU + {ip_address}"
-                )
+                gpu_message = f"{timestamp} + Control de temperatura de la GPU: {gpu_temp}°C + {ip_address}"
                 write_log(gpu_message)
                 log_to_db(
                     {
@@ -137,7 +129,7 @@ def monitor():
                 asyncio.run(send_telegram_message(gpu_message))
 
             if memory_usage > 80:
-                memory_message = f"{timestamp} + Utilización de memoria + {ip_address}"
+                memory_message = f"{timestamp} + Utilización de memoria: {memory_usage}% + {ip_address}"
                 write_log(memory_message)
                 log_to_db(
                     {
@@ -149,15 +141,14 @@ def monitor():
                 )
                 asyncio.run(send_telegram_message(memory_message))
 
-            # Registrar tareas en ejecución
-            tasks_message = f"{timestamp} + Tareas en ejecución: {[t.name for t in threading.enumerate()]}"
-            write_log(tasks_message)
         except Exception as e:
             print(f"Error en monitor: {e}")
-        time.sleep(5)  # Pausa para evitar sobrecargar el sistema
+
+        time.sleep(5)
 
 
 # Iniciar monitoreo
-monitor_thread = threading.Thread(target=monitor, name="MonitorThread")
-monitor_thread.start()
-monitor_thread.join()
+if __name__ == "__main__":
+    monitor_thread = threading.Thread(target=monitor, name="MonitorThread")
+    monitor_thread.start()
+    monitor_thread.join()
