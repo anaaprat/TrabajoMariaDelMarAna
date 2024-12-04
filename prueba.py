@@ -37,7 +37,7 @@ def get_cpu_temperature():
                 return float(sensor.Value)
         return None
     except Exception as e:
-        print(f"Error obteniendo temperatura de CPU: {e}")
+        print(f"Error obteniendo temperatura de CPU uju: {e}")
         return None
 
 
