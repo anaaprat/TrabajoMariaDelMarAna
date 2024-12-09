@@ -5,6 +5,7 @@ import logging
 from pymongo import MongoClient
 from datetime import datetime
 import socket
+import psutil  # Librería para monitoreo del sistema
 
 # Configuración del log
 logging.basicConfig(
@@ -28,70 +29,73 @@ TELEGRAM_CHAT_ID = "7936967176"
 # URL del servidor Open Hardware Monitor
 OHM_URL = "http://localhost:8085/data.json"
 
-
+# Obtener IP
 def get_ip():
     return socket.gethostbyname(socket.gethostname())
 
-
+# Obtener datos de Open Hardware Monitor
 def get_hardware_data():
     try:
         response = requests.get(OHM_URL)
         response.raise_for_status()
         data = response.json()
-        print("Datos obtenidos de Open Hardware Monitor:", data)  # Depuración
         return data
     except Exception as e:
         print(f"Error obteniendo datos de Open Hardware Monitor: {e}")
         return None
 
-
+# Extraer temperaturas de CPU/GPU
 def extract_temperatures(data, target):
-    """
-    Extrae las temperaturas relevantes para un componente específico (CPU o GPU).
-    """
     temperatures = []
 
     def traverse_children(children):
         for item in children:
             if "Children" in item:
                 traverse_children(item["Children"])
-            if "Text" in item and target in item["Text"]:  # Busca CPU o GPU en "Text"
-                if "Value" in item and "°C" in str(item["Value"]):  # Filtrar valores con °C
+            if "Text" in item and target in item["Text"]:
+                if "Value" in item and "°C" in str(item["Value"]):
                     try:
-                        clean_value = float(str(item["Value"]).replace(",", ".").replace("°C", "").strip())
-                        temperatures.append({"name": item["Text"], "value": clean_value})
+                        value = float(str(item["Value"]).replace(",", ".").replace("°C", "").strip())
+                        temperatures.append({"name": item["Text"], "value": value})
                     except ValueError:
-                        print(f"No se pudo convertir el valor: {item['Value']}")  # Depuración
+                        print(f"No se pudo convertir el valor: {item['Value']}")
 
     traverse_children(data.get("Children", []))
     return temperatures
 
-
+# Monitorizar temperaturas y registrar alertas
 def monitor_temperatures(target):
-    """
-    Monitorea temperaturas para CPU o GPU y registra alertas si superan el umbral.
-    """
-    print(f"Iniciando monitoreo para {target}")
     while True:
         data = get_hardware_data()
         if data:
             temperatures = extract_temperatures(data, target)
-            print(f"Temperaturas detectadas para {target}: {temperatures}")
             for temp in temperatures:
                 if temp["value"] > 45:  # Umbral de 45°C
                     log_data(f"Alerta de temperatura alta: {temp['name']}", temp["value"])
-        else:
-            print(f"No se encontraron temperaturas para {target}")
         time.sleep(5)
 
+# Monitorear utilización de memoria y tareas en ejecución
+def monitor_memory_and_tasks():
+    while True:
+        memory_usage = psutil.virtual_memory().percent
+        ip_address = get_ip()
+        running_tasks = [p.info for p in psutil.process_iter(attrs=["pid", "name"])]
+        
+        # Registrar uso de memoria
+        log_data("Utilización de memoria", f"{memory_usage}%", f"IP: {ip_address}")
 
+        # Registrar tareas en ejecución
+        tasks_log = f"Tareas en ejecución: {len(running_tasks)} procesos activos"
+        log_data("Tareas en ejecución", tasks_log, f"IP: {ip_address}")
 
-def log_data(action, value):
+        time.sleep(10)
+
+# Función para escribir en el log y MongoDB
+def log_data(action, value, extra_info=""):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    ip_address = get_ip()
-    log_entry = f"{timestamp} - {action} - Valor: {value}°C - IP: {ip_address}"
-    print("Registrando datos:", log_entry)  # Depuración
+    log_entry = f"{timestamp} - {action} - {value} - {extra_info}"
 
+    # Escribir en el archivo log
     with log_lock:
         with open("activity.log", "a") as f:
             f.write(log_entry + "\n")
@@ -100,32 +104,34 @@ def log_data(action, value):
         with open("activity.log", "w") as f:
             f.writelines(lines[-5:])
 
+    # Guardar en MongoDB
     try:
         collection.insert_one(
-            {"timestamp": timestamp, "action": action, "value": value, "ip": ip_address}
+            {"timestamp": timestamp, "action": action, "value": value, "extra_info": extra_info}
         )
     except Exception as e:
         print(f"Error guardando en MongoDB: {e}")
 
+    # Enviar notificación a Telegram
     send_telegram_message(log_entry)
 
-
+# Enviar mensaje a Telegram
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
     try:
         response = requests.post(url, data=data)
-        if response.status_code == 200:
-            print("Mensaje enviado a Telegram")
-        else:
+        if response.status_code != 200:
             print(f"Error enviando mensaje a Telegram: {response.status_code}")
     except Exception as e:
         print(f"Error enviando mensaje a Telegram: {e}")
 
-# Crear hilos para CPU y GPU
-threads = []
-threads.append(threading.Thread(target=monitor_temperatures, args=("CPU",)))
-threads.append(threading.Thread(target=monitor_temperatures, args=("GPU",)))
+# Crear hilos para CPU, GPU y monitor de memoria/tareas
+threads = [
+    threading.Thread(target=monitor_temperatures, args=("CPU",)),
+    threading.Thread(target=monitor_temperatures, args=("GPU",)),
+    threading.Thread(target=monitor_memory_and_tasks)
+]
 
 for thread in threads:
     thread.daemon = True
