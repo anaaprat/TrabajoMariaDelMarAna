@@ -55,10 +55,9 @@ def extract_temperatures(data, target):
         for item in children:
             if "Children" in item:
                 traverse_children(item["Children"])
-            if "Text" in item and target in item["Text"]:
+            if "Text" in item and target in item["Text"]:  # Busca CPU o GPU en "Text"
                 if "Value" in item and "°C" in str(item["Value"]):  # Filtrar valores con °C
                     try:
-                        # Reemplazar comas con puntos y convertir el valor a float
                         clean_value = float(str(item["Value"]).replace(",", ".").replace("°C", "").strip())
                         temperatures.append({"name": item["Text"], "value": clean_value})
                     except ValueError:
@@ -81,6 +80,8 @@ def monitor_temperatures(target):
             for temp in temperatures:
                 if temp["value"] > 45:  # Umbral de 45°C
                     log_data(f"Alerta de temperatura alta: {temp['name']}", temp["value"])
+        else:
+            print(f"No se encontraron temperaturas para {target}")
         time.sleep(5)
 
 

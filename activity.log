@@ -1,3 +1,5 @@
-2024-12-09 18:13:46 - Alerta de temperatura alta: CPU Core #1 - Valor: 70.0°C - IP: 192.168.1.20
-2024-12-09 18:13:46 - Alerta de temperatura alta: CPU Core #3 - Valor: 50.0°C - IP: 192.168.1.20
-2024-12-09 18:13:47 - Alerta de temperatura alta: CPU Package - Valor: 66.0°C - IP: 192.168.1.20
+2024-12-09 18:36:04 - Alerta de temperatura alta: CPU Package - Valor: 81.0°C - IP: 192.168.1.20
+2024-12-09 18:39:49 - Alerta de temperatura alta: CPU Core #1 - Valor: 68.0°C - IP: 192.168.1.20
+2024-12-09 18:39:49 - Alerta de temperatura alta: CPU Core #3 - Valor: 46.0°C - IP: 192.168.1.20
+2024-12-09 18:39:49 - Alerta de temperatura alta: CPU Core #4 - Valor: 48.0°C - IP: 192.168.1.20
+2024-12-09 18:39:49 - Alerta de temperatura alta: CPU Package - Valor: 68.0°C - IP: 192.168.1.20
