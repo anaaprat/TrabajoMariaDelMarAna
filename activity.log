@@ -1,5 +1,3 @@
-2024-12-09 17:29:25 - Tareas ejecutándose - Valor: Simuladas - IP: 192.168.1.18
-2024-12-09 17:29:25 - Control de temperatura de la GPU - Valor: 58 - IP: 192.168.1.18
-2024-12-09 17:29:29 - Control de temperatura de la CPU - Valor: 47 - IP: 192.168.1.18
-2024-12-09 17:29:30 - Utilización de memoria - Valor: 84 - IP: 192.168.1.18
-2024-12-09 17:29:31 - Control de temperatura de la GPU - Valor: 50 - IP: 192.168.1.18
+2024-12-09 18:13:46 - Alerta de temperatura alta: CPU Core #1 - Valor: 70.0°C - IP: 192.168.1.20
+2024-12-09 18:13:46 - Alerta de temperatura alta: CPU Core #3 - Valor: 50.0°C - IP: 192.168.1.20
+2024-12-09 18:13:47 - Alerta de temperatura alta: CPU Package - Valor: 66.0°C - IP: 192.168.1.20
